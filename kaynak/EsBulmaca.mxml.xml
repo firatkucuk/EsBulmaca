@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute"
+  width="650" height="700" backgroundColor="0x000000"
+  backgroundImage="@Embed('resim/arkaplan.png')" backgroundSize="100%"
+  horizontalScrollPolicy="off" verticalScrollPolicy="off" creationComplete="kartlari_olustur()">
+  <mx:Script>
+    <![CDATA[
+
+      // ###[GEREKLİ SINIFLAR]######################################################################
+
+      import mx.controls.Alert;
+      import mx.controls.Button;
+      import mx.controls.Image;
+      import mx.core.SoundAsset;
+
+
+
+      // ###[METODLAR]##############################################################################
+
+	    private var bulunanKartlar:Array;
+		  private var karistirilmisKartlar:Array;
+		  private var sonAcilanEs:Array;
+      private var zamanlayici:Timer;
+      private var oyunBasladi:Boolean = false;
+      private var tiklamaSayaci:int;
+
+      [Embed(source="resim/kart_varsayilan.png")]
+      [Bindable]
+      private var KartArkasi:Class;
+
+      [Embed(source="resim/kart00.png")]
+      [Bindable]
+      private var Kart00:Class; 
+
+      [Embed(source="resim/kart01.png")]
+      [Bindable]
+      private var Kart01:Class;
+
+      [Embed(source="resim/kart02.png")]
+      [Bindable]
+      private var Kart02:Class;
+
+      [Embed(source="resim/kart03.png")]
+      [Bindable]
+      private var Kart03:Class;
+
+      [Embed(source="resim/kart04.png")]
+      [Bindable]
+      private var Kart04:Class;
+
+      [Embed(source="resim/kart05.png")]
+      [Bindable]
+      private var Kart05:Class;
+
+      [Embed(source="resim/kart06.png")]
+      [Bindable]
+      private var Kart06:Class;
+
+      [Embed(source="resim/kart07.png")]
+      [Bindable]
+      private var Kart07:Class;
+
+      [Embed(source="ses/tik.mp3")]
+      [Bindable]
+      private var Tik:Class;
+      private var tikSesi:SoundAsset = new Tik() as SoundAsset;
+
+      [Embed(source="ses/slonga.mp3")]
+      [Bindable]
+      private var Slonga:Class;
+      private var arkaSes:SoundAsset = new Slonga() as SoundAsset;
+      private var kanal:SoundChannel;
+
+
+
+      // ###[kartlari_olustur]######################################################################
+
+      private function kartlari_olustur():void {
+
+			  for (var i:int = 0; i < 16; i++) {
+				  var etkinResim:Image = new Image();
+				  etkinResim.width = 96;
+				  etkinResim.height = 96;
+				  etkinResim.buttonMode = true;
+				  etkinResim.source = KartArkasi;
+				  etkinResim.addEventListener(MouseEvent.CLICK, ac);
+				  etkinResim.x = 50 + (((i - (i % 4)) / 4) * 150);
+				  etkinResim.y = 101 + ((i % 4) * 150);
+				  etkinResim.name = "resim_" + i;
+				  addChild(etkinResim);
+			  }
+      }
+
+
+
+      // ###[basla]#################################################################################
+
+      private function basla():void {
+
+        if (kanal == null)
+          kanal = arkaSes.play(0, 999);
+
+  			var kartlar:Array = [
+  				Kart00, Kart01, Kart02, Kart03, Kart04, Kart05, Kart06, Kart07,
+  				Kart00, Kart01, Kart02, Kart03, Kart04, Kart05, Kart06, Kart07
+  			];
+
+        karistirilmisKartlar = [];
+        bulunanKartlar = [];
+        sonAcilanEs = [98, 99];
+	
+			  for (var i:int = 0; i < 16; i++) {
+				  var rasgele:int = int(Math.random() * kartlar.length);
+				  karistirilmisKartlar.push(kartlar[rasgele]);
+				  kartlar.splice(rasgele, 1);
+				  Image(getChildByName("resim_" + i)).source = KartArkasi;
+			  }
+
+        oyunBasladi = true;
+        tiklamaSayaci = 0;
+        zamanlayici = new Timer(0);
+        zamanlayici.start();
+      }
+
+
+
+      // ###[ac]####################################################################################
+
+      private function ac(olay:Event):void {
+
+        tikSesi.play();
+
+        var elemanNo:int = int(olay.target.toString().split("_")[1]);
+
+        if (!oyunBasladi) {
+            basla();
+        }
+
+        if (sonAcilanEs[0] != elemanNo && bulunanKartlar.indexOf(elemanNo) == -1) {
+
+          tiklamaSayaci++;
+
+				  if (sonAcilanEs[1] == -1) {
+
+					  sonAcilanEs[1] = elemanNo;
+					  Image(getChildByName("resim_" + elemanNo)).source = karistirilmisKartlar[elemanNo];
+
+					  if (karistirilmisKartlar[sonAcilanEs[0]] == karistirilmisKartlar[sonAcilanEs[1]]) {
+
+						  bulunanKartlar.push(sonAcilanEs[0]);
+						  bulunanKartlar.push(sonAcilanEs[1]);
+
+			        if (bulunanKartlar.length == 16) {
+			          zamanlayici.stop();
+			          // puan hesaplaması:
+			          // en az 1.5 sn'de yapabilir.
+			          // en az hamle sayısı da 16'dır.
+			          // alınabilecek en fazla puan 10000
+			          // süre x puan x tiklamaSayisi = (10000 * 1500 * 16)
+			          // puan = (10 ^ 7 * 24) / (sure x tiklamaSayisi)
+			          var puan:int = int((Math.pow(10, 7) * 24) / (zamanlayici.currentCount * tiklamaSayaci));
+				        Alert.show("puan : " + puan, "TEBRİKLER", 0x4, null, yeniden_baslat);
+			        }
+					  }
+
+				  } else {
+
+					  if (karistirilmisKartlar[sonAcilanEs[0]] != karistirilmisKartlar[sonAcilanEs[1]]) {
+						  Image(getChildByName("resim_" + sonAcilanEs[0])).source = KartArkasi;
+						  Image(getChildByName("resim_" + sonAcilanEs[1])).source = KartArkasi;
+					  }
+
+					  sonAcilanEs = [elemanNo, -1];
+					  Image(getChildByName("resim_" + elemanNo)).source = karistirilmisKartlar[elemanNo];
+				  }
+			  }
+      }
+
+
+
+      // ###[yeniden_baslat]########################################################################
+
+      private function yeniden_baslat(dummy:Object):void {
+
+        oyunBasladi = false;
+        kanal.stop();
+        kanal = null;
+        basla();        
+      }
+    ]]>
+  </mx:Script>
+</mx:Application>
